@@ -3,110 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>White 6 台灣麻將</title>
+    <title>White 6 台灣麻將 (SVG 版)</title>
     <style>
         :root {
-            --tile-w: 45px;
-            --tile-h: 60px;
-            --bg-green: #357a38;
+            --tile-w: 50px;
+            --tile-h: 68px;
+            --bg-color: #235d2a;
         }
 
         body {
-            background-color: var(--bg-green);
+            background-color: var(--bg-color);
             margin: 0;
             display: flex;
             justify-content: center;
             align-items: flex-end;
             height: 100vh;
-            padding-bottom: 20px;
+            padding-bottom: 30px;
+            font-family: sans-serif;
         }
 
-        .hand-wrapper {
+        .hand-area {
             display: flex;
+            align-items: flex-end;
             gap: 2px;
-            padding: 10px;
-            background: rgba(0,0,0,0.2);
-            border-radius: 8px;
+            padding: 15px;
+            background: rgba(0,0,0,0.15);
+            border-radius: 10px;
         }
 
-        .tile {
+        .mahjong-svg {
             width: var(--tile-w);
             height: var(--tile-h);
-            background-color: white;
+            background: #fff;
             border-radius: 4px;
-            box-shadow: 0 3px 5px rgba(0,0,0,0.4);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
             cursor: pointer;
-            transition: transform 0.1s;
+            transition: transform 0.2s, box-shadow 0.2s;
+            /* 讓 SVG 填滿容器 */
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden;
         }
 
-        .tile img {
+        .mahjong-svg img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
         }
 
-        .tile:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        .mahjong-svg:hover {
+            transform: translateY(-15px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
         }
 
-        /* 摸進來的那張牌間距 */
-        .last-tile {
-            margin-left: 10px;
+        /* 台灣麻將第 17 張牌 (摸牌) 的間距 */
+        .draw-tile {
+            margin-left: 12px;
         }
     </style>
 </head>
 <body>
 
-<div class="hand-wrapper" id="mahjongHand">
-    </div>
+<div class="hand-area" id="playerHand"></div>
 
 <script>
-    // 定義圖片基礎路徑 (指向 GitHub 倉庫中的 PNG 資料夾)
-    const baseUrl = "https://raw.githubusercontent.com/kuochili-ops/mahjong_graphic/main/PNG%20%E4%BD%8D%E5%9B%BE/%E9%9B%80%E9%AD%82%E6%A0%B7%E5%BC%8F%20majsoul%20style/purple/";
+    // 修正後的 SVG 基礎路徑 (百分比編碼處理中文)
+    const svgBase = "https://raw.githubusercontent.com/kuochili-ops/mahjong_graphic/main/Vectors%20%E7%9F%A2%E9%87%8F%E5%9B%BE/%E9%9B%80%E9%AD%82%E6%A0%B7%E5%BC%8F%20majsoul%20style/";
 
-    // 台灣麻將 16 張 + 1 張摸牌
-    // 檔名請參考倉庫：1m.png (一萬), 1p.png (一筒), 1s.png (一索), z1.png (東) 等
-    const myHand = [
-        '1m', '2m', '3m', '4m', '5m', '6m', // 萬子
-        '1p', '2p', '3p',                   // 筒子
-        '1s', '2s', '3s',                   // 索子
-        'z1', 'z2', 'z3', 'z4',             // 東南西北
-        'z5'                                // 摸進來的牌 (白板)
+    // 模擬一組台灣麻將手牌 (16+1)
+    // 檔案命名規則：1m.svg, 2m.svg... z1.svg...
+    const currentHand = [
+        '1m', '1m', '1m', '2p', '3p', '4p', 
+        '5s', '6s', '7s', 'z1', 'z1', 'z2', 
+        'z3', 'z4', 'z7', 'z7', 
+        'z5' // 摸進來的第 17 張
     ];
 
-    function initGame() {
-        const container = document.getElementById('mahjongHand');
-        myHand.forEach((name, index) => {
-            const tileDiv = document.createElement('div');
-            tileDiv.className = 'tile';
-            if (index === 16) tileDiv.classList.add('last-tile');
+    function renderSVGHand() {
+        const container = document.getElementById('playerHand');
+        container.innerHTML = '';
+
+        currentHand.forEach((tile, index) => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'mahjong-svg';
+            if (index === 16) wrapper.classList.add('draw-tile');
 
             const img = document.createElement('img');
-            // 這裡拼接完整的圖片 URL
-            img.src = `${baseUrl}${name}.png`;
-            img.alt = name;
+            // 注意：副檔名改為 .svg
+            img.src = `${svgBase}${tile}.svg`;
+            img.alt = tile;
 
-            // 錯誤處理：如果圖片沒抓到，顯示文字替代
+            // 錯誤處理
             img.onerror = () => {
-                tileDiv.innerText = name;
-                img.style.display = 'none';
+                wrapper.innerHTML = `<span style="font-size:12px">${tile}</span>`;
+                console.error(`無法載入: ${tile}.svg`);
             };
 
-            tileDiv.appendChild(img);
-            tileDiv.onclick = () => {
-                console.log("出牌:", name);
-                tileDiv.style.opacity = "0.5"; // 模擬出牌效果
-            };
-            container.appendChild(tileDiv);
+            wrapper.appendChild(img);
+            wrapper.onclick = () => console.log(`點擊了: ${tile}`);
+            container.appendChild(wrapper);
         });
     }
 
-    initGame();
+    window.onload = renderSVGHand;
 </script>
 
 </body>
