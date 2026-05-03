@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>White 6 台灣麻將開發</title>
+    <style>
+        :root {
+            /* 這裡假設一張牌的寬高，根據圖標調整 */
+            --tile-w: 60px;
+            --tile-h: 84px;
+            --bg-color: #2e7d32; /* 綠色桌布感 */
+        }
+
+        body {
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* 手牌容器 */
+        .hand-container {
+            display: flex;
+            gap: 2px;
+            padding: 20px;
+            perspective: 1000px;
+        }
+
+        /* 單張牌樣式 */
+        .mahjong-tile {
+            width: var(--tile-w);
+            height: var(--tile-h);
+            background-color: white;
+            border-radius: 6px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.2s, margin-top 0.2s;
+            position: relative;
+            /* 這裡使用你 GitHub 倉庫中的 PNG URL */
+            background-image: url('https://raw.githubusercontent.com/kuochili-ops/mahjong_graphic/main/preview.png');
+            background-size: 600px auto; /* 依據大圖比例調整 */
+        }
+
+        /* 滑鼠懸停提牌效果 */
+        .mahjong-tile:hover {
+            transform: translateY(-15px) scale(1.05);
+            z-index: 10;
+        }
+
+        /* 翻牌動畫（繼承你之前的 flip-board 概念） */
+        .tile-flip {
+            animation: flipIn 0.6s ease-out;
+        }
+
+        @keyframes flipIn {
+            from { transform: rotateX(90deg); opacity: 0; }
+            to { transform: rotateX(0deg); opacity: 1; }
+        }
+
+        /* 牌面定位範例 (手動調整對應大圖位置) */
+        .tile-1m { background-position: -0px -0px; }
+        .tile-9m { background-position: -480px -0px; }
+    </style>
+</head>
+<body>
+
+<div class="hand-container" id="myHand">
+    </div>
+
+<script>
+    // 簡單的手牌資料結構
+    const handData = [
+        '1m', '2m', '3m', '4s', '5s', '6s', '1t', '2t', '3t', 
+        'east', 'south', 'west', 'north', 'red', 'green', 'white'
+    ];
+
+    function renderHand() {
+        const container = document.getElementById('myHand');
+        handData.forEach((tile, index) => {
+            const div = document.createElement('div');
+            div.className = `mahjong-tile tile-${tile} tile-flip`;
+            div.style.animationDelay = `${index * 0.05}s`; // 依序翻開的效果
+            
+            div.onclick = () => {
+                console.log(`出了：${tile}`);
+                div.style.display = 'none'; // 模擬出牌
+            };
+            
+            container.appendChild(div);
+        });
+    }
+
+    window.onload = renderHand;
+</script>
+
+</body>
+</html>
