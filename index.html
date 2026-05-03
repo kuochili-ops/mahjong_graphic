@@ -2,98 +2,111 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <title>White 6 台灣麻將開發</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>White 6 台灣麻將</title>
     <style>
         :root {
-            /* 這裡假設一張牌的寬高，根據圖標調整 */
-            --tile-w: 60px;
-            --tile-h: 84px;
-            --bg-color: #2e7d32; /* 綠色桌布感 */
+            --tile-w: 45px;
+            --tile-h: 60px;
+            --bg-green: #357a38;
         }
 
         body {
-            background-color: var(--bg-color);
+            background-color: var(--bg-green);
+            margin: 0;
             display: flex;
             justify-content: center;
             align-items: flex-end;
             height: 100vh;
-            margin: 0;
-            overflow: hidden;
+            padding-bottom: 20px;
         }
 
-        /* 手牌容器 */
-        .hand-container {
+        .hand-wrapper {
             display: flex;
             gap: 2px;
-            padding: 20px;
-            perspective: 1000px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
         }
 
-        /* 單張牌樣式 */
-        .mahjong-tile {
+        .tile {
             width: var(--tile-w);
             height: var(--tile-h);
             background-color: white;
-            border-radius: 6px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border-radius: 4px;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.4);
             cursor: pointer;
-            transition: transform 0.2s, margin-top 0.2s;
-            position: relative;
-            /* 這裡使用你 GitHub 倉庫中的 PNG URL */
-            background-image: url('https://raw.githubusercontent.com/kuochili-ops/mahjong_graphic/main/preview.png');
-            background-size: 600px auto; /* 依據大圖比例調整 */
+            transition: transform 0.1s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
         }
 
-        /* 滑鼠懸停提牌效果 */
-        .mahjong-tile:hover {
-            transform: translateY(-15px) scale(1.05);
-            z-index: 10;
+        .tile img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
-        /* 翻牌動畫（繼承你之前的 flip-board 概念） */
-        .tile-flip {
-            animation: flipIn 0.6s ease-out;
+        .tile:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
 
-        @keyframes flipIn {
-            from { transform: rotateX(90deg); opacity: 0; }
-            to { transform: rotateX(0deg); opacity: 1; }
+        /* 摸進來的那張牌間距 */
+        .last-tile {
+            margin-left: 10px;
         }
-
-        /* 牌面定位範例 (手動調整對應大圖位置) */
-        .tile-1m { background-position: -0px -0px; }
-        .tile-9m { background-position: -480px -0px; }
     </style>
 </head>
 <body>
 
-<div class="hand-container" id="myHand">
+<div class="hand-wrapper" id="mahjongHand">
     </div>
 
 <script>
-    // 簡單的手牌資料結構
-    const handData = [
-        '1m', '2m', '3m', '4s', '5s', '6s', '1t', '2t', '3t', 
-        'east', 'south', 'west', 'north', 'red', 'green', 'white'
+    // 定義圖片基礎路徑 (指向 GitHub 倉庫中的 PNG 資料夾)
+    const baseUrl = "https://raw.githubusercontent.com/kuochili-ops/mahjong_graphic/main/PNG%20%E4%BD%8D%E5%9B%BE/%E9%9B%80%E9%AD%82%E6%A0%B7%E5%BC%8F%20majsoul%20style/purple/";
+
+    // 台灣麻將 16 張 + 1 張摸牌
+    // 檔名請參考倉庫：1m.png (一萬), 1p.png (一筒), 1s.png (一索), z1.png (東) 等
+    const myHand = [
+        '1m', '2m', '3m', '4m', '5m', '6m', // 萬子
+        '1p', '2p', '3p',                   // 筒子
+        '1s', '2s', '3s',                   // 索子
+        'z1', 'z2', 'z3', 'z4',             // 東南西北
+        'z5'                                // 摸進來的牌 (白板)
     ];
 
-    function renderHand() {
-        const container = document.getElementById('myHand');
-        handData.forEach((tile, index) => {
-            const div = document.createElement('div');
-            div.className = `mahjong-tile tile-${tile} tile-flip`;
-            div.style.animationDelay = `${index * 0.05}s`; // 依序翻開的效果
-            
-            div.onclick = () => {
-                console.log(`出了：${tile}`);
-                div.style.display = 'none'; // 模擬出牌
+    function initGame() {
+        const container = document.getElementById('mahjongHand');
+        myHand.forEach((name, index) => {
+            const tileDiv = document.createElement('div');
+            tileDiv.className = 'tile';
+            if (index === 16) tileDiv.classList.add('last-tile');
+
+            const img = document.createElement('img');
+            // 這裡拼接完整的圖片 URL
+            img.src = `${baseUrl}${name}.png`;
+            img.alt = name;
+
+            // 錯誤處理：如果圖片沒抓到，顯示文字替代
+            img.onerror = () => {
+                tileDiv.innerText = name;
+                img.style.display = 'none';
             };
-            
-            container.appendChild(div);
+
+            tileDiv.appendChild(img);
+            tileDiv.onclick = () => {
+                console.log("出牌:", name);
+                tileDiv.style.opacity = "0.5"; // 模擬出牌效果
+            };
+            container.appendChild(tileDiv);
         });
     }
 
-    window.onload = renderHand;
+    initGame();
 </script>
 
 </body>
