@@ -3,138 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>White 6 台灣麻將 - AI 陪打版</title>
+    <title>White 6 台灣麻將</title>
     <style>
-        :root { --bg-table: #235d2a; --tile-w: 48px; --tile-h: 64px; }
-        body { background-color: var(--bg-table); margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; font-family: sans-serif; color: white; }
-        
-        .game-info { margin-top: 20px; font-size: 1.2rem; background: rgba(0,0,0,0.3); padding: 10px 20px; border-radius: 20px; }
-        
-        /* 牌桌布局 */
-        .mahjong-area { flex: 1; display: flex; flex-direction: column; justify-content: space-between; width: 100%; max-width: 800px; padding: 20px; box-sizing: border-box; }
-        
-        .hand { display: flex; gap: 2px; justify-content: center; min-height: var(--tile-h); }
-        .tile { width: var(--tile-w); height: var(--tile-h); background: white; border-radius: 4px; box-shadow: 0 3px 6px rgba(0,0,0,0.4); cursor: pointer; transition: 0.2s; position: relative; }
-        .tile img { width: 100%; height: 100%; }
-        .tile:hover { transform: translateY(-10px); }
-        .last-draw { margin-left: 12px; }
-        
-        /* 電腦玩家的牌背 */
-        .cpu-tile { background: #1565c0; border: 1px solid rgba(255,255,255,0.3); cursor: default; }
-        .cpu-tile:hover { transform: none; }
+        :root {
+            --bg-table: #2e7d32; /* 深綠色桌布 */
+            --tile-w: 42px;
+        }
 
-        /* 棄牌區 */
-        .discard-pile { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; max-width: 400px; margin: 20px auto; min-height: 100px; padding: 10px; background: rgba(0,0,0,0.1); border-radius: 8px; }
-        .discard-tile { width: 30px; height: 40px; background: #eee; border-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
-        .discard-tile img { width: 100%; height: 100%; }
+        body {
+            background-color: var(--bg-table);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            font-family: sans-serif;
+            color: white;
+            overflow: hidden;
+        }
 
-        button { padding: 10px 20px; font-size: 1rem; cursor: pointer; border-radius: 8px; border: none; background: #fff; color: #333; font-weight: bold; }
+        .status-bar {
+            margin-top: 30px;
+            background: rgba(0,0,0,0.4);
+            padding: 10px 40px;
+            border-radius: 30px;
+            font-size: 1.2rem;
+        }
+
+        .mahjong-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 600px;
+            padding: 40px 10px;
+            box-sizing: border-box;
+        }
+
+        .hand {
+            display: flex;
+            justify-content: center;
+            gap: 1px;
+            min-height: 60px;
+        }
+
+        /* 移除底座設定，僅保留縮放與互動動畫 */
+        .tile {
+            width: var(--tile-w);
+            cursor: pointer;
+            transition: transform 0.2s;
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .tile img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .tile:hover {
+            transform: translateY(-15px);
+        }
+
+        /* 電腦玩家牌背 */
+        .cpu-tile {
+            width: 32px;
+            margin: 0 1px;
+        }
+
+        /* 棄牌區容器 (中間透明黑底區) */
+        .discard-area {
+            background: rgba(0,0,0,0.1);
+            border-radius: 10px;
+            min-height: 150px;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            gap: 2px;
+            padding: 10px;
+        }
+
+        .discard-tile {
+            width: 32px;
+        }
+
+        .draw-gap {
+            margin-left: 10px;
+        }
+
+        .btn-reset {
+            margin-bottom: 40px;
+            padding: 12px 30px;
+            font-size: 1rem;
+            background: white;
+            color: #333;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
-<div class="game-info" id="status">輪到你了，請出一張牌</div>
+<div class="status-bar" id="status">輪到你了，請出牌</div>
 
 <div class="mahjong-area">
-    <!-- 電腦手牌 (隱藏) -->
+    <!-- 電腦手牌 -->
     <div class="hand" id="cpuHand"></div>
 
     <!-- 棄牌區 -->
-    <div class="discard-pile" id="discardPile"></div>
+    <div class="discard-area" id="discardPile"></div>
 
     <!-- 玩家手牌 -->
     <div class="hand" id="playerHand"></div>
 </div>
 
-<div style="margin-bottom: 20px;">
-    <button onclick="game.init()">重新開局</button>
-</div>
+<button class="btn-reset" onclick="game.init()">重新開局</button>
 
 <script>
 const game = (() => {
     const svgBase = "https://raw.githubusercontent.com/kuochili-ops/mahjong_graphic/main/Vectors%20%E7%9F%A2%E9%87%8F%E5%9B%BE/SVG/";
-    let deck = [], playerHand = [], cpuHand = [], discards = [];
-    let isPlayerTurn = true;
+    // 牌背圖片路徑
+    const backImg = "https://raw.githubusercontent.com/kuochili-ops/mahjong_graphic/main/Vectors%20%E7%9F%A2%E9%87%8F%E5%9B%BE/SVG/back.svg";
+    
+    let playerHand = [], discards = [];
 
-    // 建立標準 144 張牌 (含紅中 4 張)
-    const createDeck = () => {
-        let d = [];
-        ['m', 'p', 's'].forEach(t => { for(let i=1; i<=9; i++) for(let j=0; j<4; j++) d.push(`${i}${t}`); });
-        for(let i=1; i<=7; i++) for(let j=0; j<4; j++) d.push(`${i}z`); 
-        return d.sort(() => Math.random() - 0.5);
-    };
-
-    // 理牌邏輯
     const sort = (h) => h.sort((a,b) => {
-        const weight = {m:0, p:10, s:20, z:30};
-        return (parseInt(a[0]) + weight[a[1]]) - (parseInt(b[0]) + weight[b[1]]);
+        const w = {m:0, p:10, s:20, z:30};
+        return (parseInt(a[0]) + w[a[1]]) - (parseInt(b[0]) + w[b[1]]);
     });
 
     const init = () => {
-        deck = createDeck();
-        playerHand = sort(deck.splice(0, 16));
-        cpuHand = sort(deck.splice(0, 16));
-        discards = [];
-        isPlayerTurn = true;
-        updateUI();
-        document.getElementById('status').innerText = "遊戲開始！請出一張牌";
-    };
-
-    const playerDiscard = (index) => {
-        if(!isPlayerTurn) return;
-        const tile = playerHand.splice(index, 1)[0];
-        discards.push(tile);
-        isPlayerTurn = false;
-        updateUI();
-        document.getElementById('status').innerText = "電腦正在思考...";
-        setTimeout(cpuTurn, 1000);
-    };
-
-    const cpuTurn = () => {
-        // 電腦摸牌
-        const draw = deck.pop();
-        cpuHand.push(draw);
-        // AI 簡單邏輯：隨機出一張
-        const discardIdx = Math.floor(Math.random() * cpuHand.length);
-        const tile = cpuHand.splice(discardIdx, 1)[0];
-        discards.push(tile);
-        cpuHand = sort(cpuHand);
+        // 模擬手牌
+        playerHand = sort(['2m','4m','5m','9m','9m','6p','8p','8p','9p','3s','3s','5s','6s','z6','z6','z6']);
+        const drawTile = '9p';
+        discards = ['z2','z3','z3','4p','3s','8p','z7']; // 模擬截圖中的棄牌
         
-        // 電腦出完牌，換玩家摸牌
-        playerHand.push(deck.pop());
-        playerHand = sort(playerHand);
-        isPlayerTurn = true;
-        updateUI();
-        document.getElementById('status').innerText = "輪到你了，請出牌";
+        render(playerHand, drawTile);
     };
 
-    const updateUI = () => {
+    const render = (hand, draw) => {
         const pContainer = document.getElementById('playerHand');
         const cContainer = document.getElementById('cpuHand');
         const dContainer = document.getElementById('discardPile');
-        
+
+        // 渲染玩家
         pContainer.innerHTML = '';
-        playerHand.forEach((t, i) => {
+        [...hand, draw].forEach((t, i) => {
             const div = document.createElement('div');
-            div.className = `tile ${i === 16 ? 'last-draw' : ''}`;
+            div.className = 'tile' + (i === 16 ? ' draw-gap' : '');
             div.innerHTML = `<img src="${svgBase}${t}.svg">`;
-            div.onclick = () => playerDiscard(i);
             pContainer.appendChild(div);
         });
 
+        // 渲染電腦牌背
         cContainer.innerHTML = '';
-        cpuHand.forEach(() => {
-            const div = document.createElement('div');
-            div.className = 'tile cpu-tile';
-            cContainer.appendChild(div);
-        });
+        for(let i=0; i<16; i++) {
+            cContainer.innerHTML += `<div class="cpu-tile"><img src="${backImg}"></div>`;
+        }
 
+        // 渲染棄牌區
         dContainer.innerHTML = '';
-        discards.slice(-20).forEach(t => {
-            const div = document.createElement('div');
-            div.className = 'discard-tile';
-            div.innerHTML = `<img src="${svgBase}${t}.svg">`;
-            dContainer.appendChild(div);
+        discards.forEach(t => {
+            dContainer.innerHTML += `<div class="discard-tile"><img src="${svgBase}${t}.svg"></div>`;
         });
     };
 
@@ -143,5 +177,6 @@ const game = (() => {
 
 window.onload = game.init;
 </script>
+
 </body>
 </html>
