@@ -3,193 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>White 6 台灣麻將開發版</title>
+    <title>White 6 台灣麻將 (標準版)</title>
     <style>
         :root {
             --bg-table: #235d2a;
-            --tile-w: 54px;
-            --tile-h: 74px;
-            --transition-speed: 0.2s;
+            --tile-w: 52px;
+            --tile-h: 70px;
         }
 
         body {
             background-color: var(--bg-table);
             margin: 0;
             display: flex;
-            justify-content: center;
-            align-items: flex-end;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
             height: 100vh;
-            overflow: hidden;
-            font-family: "Microsoft JhengHei", sans-serif;
+            padding-bottom: 20px;
+            font-family: sans-serif;
         }
 
-        /* 牌桌區域 */
-        .mahjong-table {
+        .mahjong-hand {
             display: flex;
             align-items: flex-end;
             gap: 2px;
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 12px;
-            margin-bottom: 30px;
-            perspective: 800px;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
         }
 
-        /* 單張麻將牌樣式 */
         .tile {
             width: var(--tile-w);
             height: var(--tile-h);
-            background: #fff;
+            background: white;
             border-radius: 4px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.4);
             cursor: pointer;
-            transition: transform var(--transition-speed), box-shadow var(--transition-speed);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            user-select: none;
+            transition: transform 0.2s;
+            animation: flipIn 0.4s ease-out;
         }
 
-        .tile img {
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
+        .tile img { width: 100%; height: 100%; }
 
-        /* 提牌效果 */
-        .tile:hover {
-            transform: translateY(-15px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-        }
+        .tile:hover { transform: translateY(-15px); }
 
-        /* 翻牌動畫（繼承 flip-board 概念） */
-        .flip-in {
-            animation: flipEffect 0.5s ease-out forwards;
-        }
+        .last-tile { margin-left: 12px; }
 
-        @keyframes flipEffect {
+        @keyframes flipIn {
             from { transform: rotateX(90deg); opacity: 0; }
             to { transform: rotateX(0deg); opacity: 1; }
         }
 
-        /* 台灣麻將摸進來的第 17 張牌 */
-        .last-draw {
-            margin-left: 15px;
-        }
-
-        /* 控制面板 */
-        .controls {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-        }
-
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            background: #fff;
-            border: none;
-            border-radius: 5px;
-            font-weight: bold;
-        }
+        .controls { margin-bottom: 20px; }
+        button { padding: 8px 16px; cursor: pointer; border-radius: 4px; border: none; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="controls">
-    <button onclick="mjModule.shuffleAndDeal()">重新洗牌</button>
+    <button onclick="game.init()">重新發牌 (16+1)</button>
 </div>
 
-<div class="mahjong-table" id="handContainer">
-    <!-- 牌面由 JavaScript 動態生成 -->
-</div>
+<div class="mahjong-hand" id="playerHand"></div>
 
 <script>
-/**
- * White 6 麻將開發模組
- * 整合 GitHub: kuochili-ops/mahjong_graphic 資源
- */
-const mjModule = (() => {
-    // 基礎路徑：指向 Vectors 矢量图/SVG/ 目錄
-    const BASE_URL = "https://raw.githubusercontent.com/kuochili-ops/mahjong_graphic/main/Vectors%20%E7%9F%A2%E9%87%8F%E5%9B%BE/SVG/";
+const game = (() => {
+    const svgBase = "https://raw.githubusercontent.com/kuochili-ops/mahjong_graphic/main/Vectors%20%E7%9F%A2%E9%87%8F%E5%9B%BE/SVG/";
     
-    // 定義所有牌種
-    const tilesPool = {
-        m: ['1m', '2m', '3m', '4m', '5m', '6m', '7m', '8m', '9m'], // 萬
-        p: ['1p', '2p', '3p', '4p', '5p', '6p', '7p', '8p', '9p'], // 筒
-        s: ['1s', '2s', '3s', '4s', '5s', '6s', '7s', '8s', '9s'], // 索
-        z: ['1z', '2z', '3z', '4z', '5z', '6z', '7z']             // 字牌 (東南西北中發白)
+    // 定義牌值與排序權重
+    const TILE_TYPES = {
+        m: 10, p: 20, s: 30, z: 40 // 萬, 筒, 索, 字
     };
 
-    let currentHand = [];
-
-    // 初始化/洗牌邏輯
-    const shuffleAndDeal = () => {
-        const container = document.getElementById('handContainer');
-        container.innerHTML = '';
-        
-        // 模擬台灣麻將 16+1 張
-        // 考慮規則：紅中 (7z) 全場只有一張
-        currentHand = generateRandomHand(17);
-        
-        render(container);
-    };
-
-    // 隨機產生手牌 (示範用)
-    const generateRandomHand = (count) => {
-        let hand = [];
-        const allTypes = [...tilesPool.m, ...tilesPool.p, ...tilesPool.s, ...tilesPool.z];
-        
-        for(let i=0; i < count; i++) {
-            let randomTile = allTypes[Math.floor(Math.random() * allTypes.length)];
-            
-            // 特殊邏輯：如果抽到紅中(7z)，檢查是否已存在 (全場僅限一張)
-            if (randomTile === '7z' && hand.includes('7z')) {
-                i--; // 重新抽
-                continue;
+    // 建立標準 144 張牌池 (不含花牌先以 136 張示範)
+    const createDeck = () => {
+        let deck = [];
+        ['m', 'p', 's'].forEach(type => {
+            for (let i = 1; i <= 9; i++) {
+                for (let j = 0; j < 4; j++) deck.push(`${i}${type}`);
             }
-            hand.push(randomTile);
+        });
+        for (let i = 1; i <= 7; i++) { // 1z-7z (東南西北中發白)
+            for (let j = 0; j < 4; j++) deck.push(`${i}z`);
         }
-        // 簡單排序：字牌放在最後，其餘按字母排
-        return hand.sort();
+        return deck;
     };
 
-    // 渲染至畫面
-    const render = (container) => {
-        currentHand.forEach((tileName, index) => {
-            const tileDiv = document.createElement('div');
-            tileDiv.className = 'tile flip-in';
-            tileDiv.style.animationDelay = `${index * 0.05}s`;
-            
-            if (index === 16) tileDiv.classList.add('last-draw');
-
-            const img = document.createElement('img');
-            img.src = `${BASE_URL}${tileName}.svg`;
-            img.alt = tileName;
-            
-            // 處理載入失敗 (例如檔案不存在時顯示文字)
-            img.onerror = () => {
-                tileDiv.innerText = tileName;
-                img.style.display = 'none';
-            };
-
-            tileDiv.appendChild(img);
-            tileDiv.onclick = () => {
-                console.log(`出牌: ${tileName}`);
-                tileDiv.style.opacity = "0";
-                setTimeout(() => tileDiv.remove(), 200);
-            };
-
-            container.appendChild(tileDiv);
+    const sortHand = (hand) => {
+        return hand.sort((a, b) => {
+            const valA = parseInt(a[0]) + TILE_TYPES[a[1]];
+            const valB = parseInt(b[0]) + TILE_TYPES[b[1]];
+            return valA - valB;
         });
     };
 
-    return { shuffleAndDeal };
+    const init = () => {
+        const container = document.getElementById('playerHand');
+        container.innerHTML = '';
+        
+        let deck = createDeck();
+        // 洗牌 (Fisher-Yates)
+        for (let i = deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [deck[i], deck[j]] = [deck[j], deck[i]];
+        }
+
+        // 抽 16 張並理牌
+        let hand = sortHand(deck.splice(0, 16));
+        // 第 17 張摸牌
+        let draw = deck.pop();
+
+        render(container, hand, draw);
+    };
+
+    const render = (container, hand, draw) => {
+        const fullHand = [...hand, draw];
+        fullHand.forEach((tile, index) => {
+            const div = document.createElement('div');
+            div.className = 'tile';
+            if (index === 16) div.classList.add('last-tile');
+
+            const img = document.createElement('img');
+            // 轉換為你的 GitHub 檔名格式: 1m.svg, 1z.svg...
+            const fileName = (tile[1] === 'z') ? `${tile[0]}z.svg` : `${tile[0]}${tile[1]}.svg`;
+            img.src = `${svgBase}${fileName}`;
+            
+            div.appendChild(img);
+            container.appendChild(div);
+        });
+    };
+
+    return { init };
 })();
 
-// 頁面載入後自動開局
-window.onload = mjModule.shuffleAndDeal;
+window.onload = game.init;
 </script>
 
 </body>
