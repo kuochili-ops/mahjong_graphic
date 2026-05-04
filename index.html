@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>White 6 台灣麻將</title>
+    <title>White 6 台灣麻將 - 比例同步版</title>
     <style>
         :root {
             --bg-table: #2e7d32;
-            --tile-w: 42px;
-            --blue-back: #1565c0; /* 經典深藍色牌背 */
+            --tile-w: 42px; /* 統一牌寬 */
+            --tile-h: 56px; /* 統一牌高，對應 SVG 比例 */
+            --blue-back: #1565c0;
         }
 
         body {
@@ -46,11 +47,13 @@
             display: flex;
             justify-content: center;
             gap: 1px;
-            min-height: 60px;
+            min-height: var(--tile-h);
         }
 
+        /* 牌型基礎樣式 */
         .tile {
             width: var(--tile-w);
+            height: var(--tile-h);
             cursor: pointer;
             transition: transform 0.2s;
             display: flex;
@@ -67,22 +70,24 @@
             transform: translateY(-15px);
         }
 
-        /* 藍色牌背 CSS */
+        /* 電腦牌背：尺寸設定與 .tile 相同 */
         .cpu-tile {
-            width: 34px;
-            height: 46px;
+            width: var(--tile-w);
+            height: var(--tile-h);
             background-color: var(--blue-back);
-            border: 2px solid #fff;
+            border: 1px solid #fff;
             border-radius: 4px;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
             margin: 0 1px;
+            box-sizing: border-box;
             position: relative;
         }
 
+        /* 裝飾性內框 */
         .cpu-tile::after {
             content: '';
             position: absolute;
-            top: 4px; left: 4px; right: 4px; bottom: 4px;
+            top: 3px; left: 3px; right: 3px; bottom: 3px;
             border: 1px solid rgba(255,255,255,0.2);
             border-radius: 2px;
         }
@@ -118,8 +123,10 @@
 <div class="status-bar" id="status">輪到你了，請出牌</div>
 
 <div class="mahjong-area">
+    <!-- 電腦手牌：現在尺寸與正面一致 -->
     <div class="hand" id="cpuHand"></div>
     <div class="discard-area" id="discardPile"></div>
+    <!-- 玩家手牌 -->
     <div class="hand" id="playerHand"></div>
 </div>
 
@@ -130,9 +137,8 @@ const game = (() => {
     const pathPart = encodeURIComponent("Vectors 矢量图");
     const svgBase = `https://raw.githubusercontent.com/kuochili-ops/mahjong_graphic/main/${pathPart}/SVG/`;
     
-    let deck = [], playerHand = [], discards = [];
+    let deck = [], playerHand = [];
 
-    // Fisher-Yates 洗牌演算法：確保機率更自然均勻
     const shuffle = (array) => {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -143,13 +149,11 @@ const game = (() => {
 
     const createDeck = () => {
         let d = [];
-        // 筒、條、萬各 36 張
         ['m', 'p', 's'].forEach(t => { 
             for(let i=1; i<=9; i++) for(let j=0; j<4; j++) d.push(`${i}${t}`); 
         });
-        // 字牌各 4 張 (1z-7z)
         for(let i=1; i<=7; i++) for(let j=0; j<4; j++) d.push(`${i}z`); 
-        return shuffle(d); // 使用優化後的洗牌
+        return shuffle(d);
     };
 
     const sort = (h) => h.sort((a,b) => {
@@ -160,7 +164,6 @@ const game = (() => {
     const init = () => {
         deck = createDeck();
         playerHand = sort(deck.splice(0, 16));
-        discards = [];
         const drawTile = deck.pop();
         render(playerHand, drawTile);
     };
@@ -169,7 +172,6 @@ const game = (() => {
         const pContainer = document.getElementById('playerHand');
         const cContainer = document.getElementById('cpuHand');
         
-        // 渲染玩家
         pContainer.innerHTML = '';
         [...hand, draw].forEach((t, i) => {
             const div = document.createElement('div');
@@ -178,7 +180,6 @@ const game = (() => {
             pContainer.appendChild(div);
         });
 
-        // 渲染藍色牌背
         cContainer.innerHTML = '';
         for(let i=0; i<16; i++) {
             cContainer.innerHTML += `<div class="cpu-tile"></div>`;
