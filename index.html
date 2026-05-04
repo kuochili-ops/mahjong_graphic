@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>White 6 台灣麻將 - 修正版</title>
+    <title>White 6 台灣麻將</title>
     <style>
         :root {
             --bg-table: #2e7d32;
             --tile-w: 42px;
+            --blue-back: #1565c0; /* 經典深藍色牌背 */
         }
 
         body {
@@ -48,7 +49,6 @@
             min-height: 60px;
         }
 
-        /* 移除底座，直接顯示 SVG */
         .tile {
             width: var(--tile-w);
             cursor: pointer;
@@ -67,6 +67,26 @@
             transform: translateY(-15px);
         }
 
+        /* 藍色牌背 CSS */
+        .cpu-tile {
+            width: 34px;
+            height: 46px;
+            background-color: var(--blue-back);
+            border: 2px solid #fff;
+            border-radius: 4px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+            margin: 0 1px;
+            position: relative;
+        }
+
+        .cpu-tile::after {
+            content: '';
+            position: absolute;
+            top: 4px; left: 4px; right: 4px; bottom: 4px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 2px;
+        }
+
         .discard-area {
             background: rgba(0,0,0,0.15);
             border-radius: 15px;
@@ -81,11 +101,9 @@
         .discard-tile { width: 32px; }
         .draw-gap { margin-left: 12px; }
 
-        .cpu-tile { width: 34px; margin: 0 1px; opacity: 0.9; }
-
-        button {
+        .btn-reset {
             margin-bottom: 30px;
-            padding: 10px 25px;
+            padding: 12px 30px;
             font-size: 1rem;
             background: white;
             border: none;
@@ -100,33 +118,38 @@
 <div class="status-bar" id="status">輪到你了，請出牌</div>
 
 <div class="mahjong-area">
-    <!-- 電腦手牌 (牌背) -->
     <div class="hand" id="cpuHand"></div>
-
-    <!-- 棄牌區 -->
     <div class="discard-area" id="discardPile"></div>
-
-    <!-- 玩家手牌 -->
     <div class="hand" id="playerHand"></div>
 </div>
 
-<button onclick="game.init()">重新開局</button>
+<button class="btn-reset" onclick="game.init()">重新開局</button>
 
 <script>
 const game = (() => {
-    // 關鍵修正：對中文目錄進行正確編碼
     const pathPart = encodeURIComponent("Vectors 矢量图");
     const svgBase = `https://raw.githubusercontent.com/kuochili-ops/mahjong_graphic/main/${pathPart}/SVG/`;
-    const backImg = `${svgBase}back.svg`;
     
-    let deck = [], playerHand = [], cpuHand = [], discards = [];
+    let deck = [], playerHand = [], discards = [];
 
-    // 建立 144 張牌 (含紅中 7z 共 4 張)
+    // Fisher-Yates 洗牌演算法：確保機率更自然均勻
+    const shuffle = (array) => {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    };
+
     const createDeck = () => {
         let d = [];
-        ['m', 'p', 's'].forEach(t => { for(let i=1; i<=9; i++) for(let j=0; j<4; j++) d.push(`${i}${t}`); });
+        // 筒、條、萬各 36 張
+        ['m', 'p', 's'].forEach(t => { 
+            for(let i=1; i<=9; i++) for(let j=0; j<4; j++) d.push(`${i}${t}`); 
+        });
+        // 字牌各 4 張 (1z-7z)
         for(let i=1; i<=7; i++) for(let j=0; j<4; j++) d.push(`${i}z`); 
-        return d.sort(() => Math.random() - 0.5);
+        return shuffle(d); // 使用優化後的洗牌
     };
 
     const sort = (h) => h.sort((a,b) => {
@@ -137,49 +160,29 @@ const game = (() => {
     const init = () => {
         deck = createDeck();
         playerHand = sort(deck.splice(0, 16));
-        cpuHand = deck.splice(0, 16); // 電腦不一定要理牌
         discards = [];
-        
-        // 摸第一張牌
-        const firstDraw = deck.pop();
-        render(playerHand, firstDraw);
+        const drawTile = deck.pop();
+        render(playerHand, drawTile);
     };
 
     const render = (hand, draw) => {
         const pContainer = document.getElementById('playerHand');
         const cContainer = document.getElementById('cpuHand');
-        const dContainer = document.getElementById('discardPile');
-
+        
         // 渲染玩家
         pContainer.innerHTML = '';
         [...hand, draw].forEach((t, i) => {
             const div = document.createElement('div');
             div.className = 'tile' + (i === 16 ? ' draw-gap' : '');
-            
-            const img = document.createElement('img');
-            img.src = `${svgBase}${t}.svg`;
-            
-            // 偵錯：如果還是破圖，顯示代號
-            img.onerror = () => {
-                div.style.background = "red";
-                div.innerHTML = `<small>${t}</small>`;
-            };
-
-            div.appendChild(img);
+            div.innerHTML = `<img src="${svgBase}${t}.svg" onerror="this.parentElement.innerHTML='<small>${t}</small>'">`;
             pContainer.appendChild(div);
         });
 
-        // 渲染電腦牌背
+        // 渲染藍色牌背
         cContainer.innerHTML = '';
         for(let i=0; i<16; i++) {
-            cContainer.innerHTML += `<div class="cpu-tile"><img src="${backImg}"></div>`;
+            cContainer.innerHTML += `<div class="cpu-tile"></div>`;
         }
-
-        // 渲染棄牌區 (範例顯示最後 15 張)
-        dContainer.innerHTML = '';
-        discards.slice(-15).forEach(t => {
-            dContainer.innerHTML += `<div class="discard-tile"><img src="${svgBase}${t}.svg"></div>`;
-        });
     };
 
     return { init };
@@ -187,6 +190,5 @@ const game = (() => {
 
 window.onload = game.init;
 </script>
-
 </body>
 </html>
