@@ -3,14 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>White 6 台灣麻將 - 比例完美對齊版</title>
+    <title>White 6 台灣麻將 - 最終對齊修正版</title>
     <style>
         :root {
             --bg-table: #2e7d32;
-            /* 調整牌背視覺尺寸，使其對齊正面白色實體 */
-            --back-w: 26px; 
-            --back-h: 38px;
+            /* 根據圖片觀察，正面牌實體寬度約為 22px-24px */
+            --tile-w: 23px; 
+            --tile-h: 33px;
             --blue-back: #1565c0;
+            /* 統一間隔 */
+            --tile-gap: 2px;
         }
 
         body {
@@ -39,27 +41,28 @@
             flex-direction: column;
             justify-content: space-between;
             width: 100%;
-            max-width: 600px;
-            padding: 40px 10px;
+            max-width: 500px;
+            padding: 60px 10px;
             box-sizing: border-box;
         }
 
         .hand {
             display: flex;
             justify-content: center;
-            gap: 2px; /* 統一排列間隔 */
+            gap: var(--tile-gap);
             min-height: 50px;
             align-items: center;
         }
 
-        /* 玩家正面：容器包含 SVG 留白 */
+        /* 玩家正面：調整容器負邊距，抵消 SVG 檔案本身的透明邊框 */
         .tile {
-            width: 32px; 
+            width: 28px; /* 容器稍大，容納 SVG */
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             transition: transform 0.2s;
+            margin: 0 -1px; /* 微調負邊距讓白色牌身更靠攏 */
         }
 
         .tile img {
@@ -72,25 +75,23 @@
             transform: translateY(-10px);
         }
 
-        /* 電腦牌背：視覺尺寸補償 */
+        /* 電腦牌背：嚴格對齊正面白色部分的寬度 */
         .cpu-tile {
-            width: var(--back-w);
-            height: var(--back-h);
+            width: var(--tile-w);
+            height: var(--tile-h);
             background-color: var(--blue-back);
-            border: 1px solid rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.8);
             border-radius: 2px;
             box-shadow: 0 2px 3px rgba(0,0,0,0.4);
-            margin: 0; 
-            position: relative;
             box-sizing: border-box;
+            position: relative;
         }
 
-        /* 牌背內框 */
         .cpu-tile::after {
             content: '';
             position: absolute;
             top: 2px; left: 2px; right: 2px; bottom: 2px;
-            border: 1px solid rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.15);
             border-radius: 1px;
         }
 
@@ -98,30 +99,29 @@
             background: rgba(0,0,0,0.1);
             border-radius: 15px;
             min-height: 180px;
-            padding: 15px;
         }
 
-        .draw-gap { margin-left: 10px; }
+        /* 摸牌間隔 */
+        .draw-gap { margin-left: 12px; }
 
         .btn-reset {
-            margin-bottom: 40px;
+            margin-bottom: 50px;
             padding: 12px 30px;
             background: white;
             border: none;
             border-radius: 8px;
             font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 3px 0 #ccc;
         }
     </style>
 </head>
 <body>
 
-<div class="status-bar" id="status">輪到你了，請出牌</div>
+<div class="status-bar">輪到你了，請出牌</div>
 
 <div class="mahjong-area">
     <div class="hand" id="cpuHand"></div>
-    <div class="discard-area" id="discardPile"></div>
+    <div class="discard-area"></div>
     <div class="hand" id="playerHand"></div>
 </div>
 
@@ -159,8 +159,7 @@ const game = (() => {
     const init = () => {
         deck = createDeck();
         playerHand = sort(deck.splice(0, 16));
-        const drawTile = deck.pop();
-        render(playerHand, drawTile);
+        render(playerHand, deck.pop());
     };
 
     const render = (hand, draw) => {
