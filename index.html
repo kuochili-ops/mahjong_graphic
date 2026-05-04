@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>White 6 台灣麻將 - 比例對齊版</title>
+    <title>White 6 台灣麻將 - 比例完美對齊版</title>
     <style>
         :root {
             --bg-table: #2e7d32;
-            /* 調整寬高比，使其與真實麻將牌更接近 */
-            --tile-w: 40px;
-            --tile-h: 54px; 
+            --tile-w: 36px; /* 稍微縮小寬度以容納 16 張牌 */
+            --tile-h: 48px; /* 關鍵：縮短高度，符合正面視覺感 */
             --blue-back: #1565c0;
         }
 
@@ -40,89 +39,75 @@
             justify-content: space-between;
             width: 100%;
             max-width: 600px;
-            padding: 30px 10px;
+            padding: 40px 10px;
             box-sizing: border-box;
         }
 
         .hand {
             display: flex;
             justify-content: center;
-            gap: 2px; /* 增加一點點間隙 */
-            min-height: var(--tile-h);
+            gap: 1px;
+            min-height: 60px;
+            align-items: center; /* 垂直置中對齊 */
         }
 
-        /* 玩家正面牌型 */
+        /* 玩家正面 */
         .tile {
             width: var(--tile-w);
-            height: var(--tile-h);
             cursor: pointer;
             transition: transform 0.2s;
             display: flex;
             align-items: center;
-            justify-content: center;
         }
 
         .tile img {
             width: 100%;
-            height: 100%;
-            object-fit: contain; /* 確保 SVG 不會變形 */
+            height: auto;
+            display: block;
         }
 
         .tile:hover {
-            transform: translateY(-15px);
+            transform: translateY(-10px);
         }
 
-        /* 電腦牌背樣式：比例與 .tile 完全一致 */
+        /* 電腦牌背：高度縮減，寬度微增 */
         .cpu-tile {
-            width: var(--tile-w);
-            height: var(--tile-h);
+            width: 32px; /* 實際寬度 */
+            height: 42px; /* 實際高度：比正面圖片的容器更矮，以抵消 SVG 留白 */
             background-color: var(--blue-back);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            border-radius: 4px;
-            box-shadow: 0 3px 5px rgba(0,0,0,0.4);
-            box-sizing: border-box;
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            border-radius: 3px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            margin: 0 1px;
             position: relative;
         }
 
-        /* 牌背裝飾性內框線 */
         .cpu-tile::after {
             content: '';
             position: absolute;
-            top: 4px; left: 4px; right: 4px; bottom: 4px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 2px;
+            top: 3px; left: 3px; right: 3px; bottom: 3px;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 1px;
         }
 
         .discard-area {
-            background: rgba(0,0,0,0.15);
+            background: rgba(0,0,0,0.1);
             border-radius: 15px;
             min-height: 180px;
-            display: flex;
-            flex-wrap: wrap;
-            align-content: flex-start;
-            gap: 4px;
             padding: 15px;
         }
 
-        .discard-tile { width: 30px; height: 40px; }
         .draw-gap { margin-left: 10px; }
 
         .btn-reset {
             margin-bottom: 40px;
-            padding: 12px 35px;
+            padding: 12px 30px;
             font-size: 1rem;
             background: white;
-            color: #333;
             border: none;
             border-radius: 8px;
             font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 4px 0 #ccc;
-        }
-        
-        .btn-reset:active {
-            transform: translateY(2px);
-            box-shadow: 0 2px 0 #ccc;
         }
     </style>
 </head>
@@ -131,10 +116,8 @@
 <div class="status-bar" id="status">輪到你了，請出牌</div>
 
 <div class="mahjong-area">
-    <!-- 電腦手牌：比例已修正 -->
     <div class="hand" id="cpuHand"></div>
     <div class="discard-area" id="discardPile"></div>
-    <!-- 玩家手牌 -->
     <div class="hand" id="playerHand"></div>
 </div>
 
@@ -142,7 +125,6 @@
 
 <script>
 const game = (() => {
-    // 確保路徑編碼正確
     const folder = encodeURIComponent("Vectors 矢量图");
     const svgBase = `https://raw.githubusercontent.com/kuochili-ops/mahjong_graphic/main/${folder}/SVG/`;
     
@@ -181,16 +163,14 @@ const game = (() => {
         const pContainer = document.getElementById('playerHand');
         const cContainer = document.getElementById('cpuHand');
         
-        // 渲染玩家
         pContainer.innerHTML = '';
         [...hand, draw].forEach((t, i) => {
             const div = document.createElement('div');
             div.className = 'tile' + (i === 16 ? ' draw-gap' : '');
-            div.innerHTML = `<img src="${svgBase}${t}.svg" onerror="this.parentElement.innerHTML='<small>${t}</small>'">`;
+            div.innerHTML = `<img src="${svgBase}${t}.svg">`;
             pContainer.appendChild(div);
         });
 
-        // 渲染電腦牌背
         cContainer.innerHTML = '';
         for(let i=0; i<16; i++) {
             cContainer.innerHTML += `<div class="cpu-tile"></div>`;
