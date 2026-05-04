@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>White 6 台灣麻將 - 視覺對齊修正版</title>
+    <title>White 6 台灣麻將 - 比例完美對齊版</title>
     <style>
         :root {
             --bg-table: #2e7d32;
-            --tile-w: 26px; /* 縮小寬度，讓牌背看起來跟正面白色部分一樣寬 */
-            --tile-h: 38px; /* 縮短高度，對齊正面視覺高度 */
+            /* 調整牌背視覺尺寸，使其對齊正面白色實體 */
+            --back-w: 26px; 
+            --back-h: 38px;
             --blue-back: #1565c0;
         }
 
@@ -39,21 +40,21 @@
             justify-content: space-between;
             width: 100%;
             max-width: 600px;
-            padding: 50px 10px;
+            padding: 40px 10px;
             box-sizing: border-box;
         }
 
         .hand {
             display: flex;
             justify-content: center;
-            gap: 2px;
+            gap: 2px; /* 統一排列間隔 */
             min-height: 50px;
             align-items: center;
         }
 
-        /* 玩家正面牌型 */
+        /* 玩家正面：容器包含 SVG 留白 */
         .tile {
-            width: 32px; /* 正面容器稍大，因為 SVG 包含透明邊距 */
+            width: 32px; 
             display: flex;
             align-items: center;
             justify-content: center;
@@ -71,20 +72,20 @@
             transform: translateY(-10px);
         }
 
-        /* 電腦牌背：手動縮減尺寸以匹配正面白色實體部分 */
+        /* 電腦牌背：視覺尺寸補償 */
         .cpu-tile {
-            width: var(--tile-w);
-            height: var(--tile-h);
+            width: var(--back-w);
+            height: var(--back-h);
             background-color: var(--blue-back);
-            border: 1px solid rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.9);
             border-radius: 2px;
             box-shadow: 0 2px 3px rgba(0,0,0,0.4);
-            margin: 0 1px;
+            margin: 0; 
             position: relative;
             box-sizing: border-box;
         }
 
-        /* 牌背內框裝飾 */
+        /* 牌背內框 */
         .cpu-tile::after {
             content: '';
             position: absolute;
@@ -100,7 +101,7 @@
             padding: 15px;
         }
 
-        .draw-gap { margin-left: 8px; }
+        .draw-gap { margin-left: 10px; }
 
         .btn-reset {
             margin-bottom: 40px;
@@ -110,6 +111,7 @@
             border-radius: 8px;
             font-weight: bold;
             cursor: pointer;
+            box-shadow: 0 3px 0 #ccc;
         }
     </style>
 </head>
@@ -118,10 +120,8 @@
 <div class="status-bar" id="status">輪到你了，請出牌</div>
 
 <div class="mahjong-area">
-    <!-- 電腦手牌 -->
     <div class="hand" id="cpuHand"></div>
     <div class="discard-area" id="discardPile"></div>
-    <!-- 玩家手牌 -->
     <div class="hand" id="playerHand"></div>
 </div>
 
